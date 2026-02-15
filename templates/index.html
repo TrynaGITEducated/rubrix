@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUBRIX - AI Assignment Evaluator</title>
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+    
+    <!-- Fallback to your original logo if favicon files don't exist -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rubrix-logo-2.png') }}" type="image/x-icon">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Additional transitions and animations */
+        .upload-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .upload-card.file-uploaded {
+            border-color: #4CAF50 !important;
+            border-width: 3px;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.2);
+            transform: translateY(-8px);
+        }
+        
+        .file-name {
+            transition: all 0.3s ease;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .file-name.show {
+            opacity: 1;
+            max-height: 100px;
+            margin-top: 1rem;
+        }
+        
+        .file-label {
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+        }
+        
+        .file-label:hover {
+            transform: scale(1.05);
+        }
+        
+        .file-label i {
+            transition: transform 0.3s ease;
+        }
+        
+        .file-label:hover i {
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
+        }
+        
+        .feature-card {
+            transition: all 0.4s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+        }
+        
+        .stat-card {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .stat-card:nth-child(2) { animation-delay: 0.5s; }
+        .stat-card:nth-child(3) { animation-delay: 1s; }
+        .stat-card:nth-child(4) { animation-delay: 1.5s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 45, 149, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 45, 149, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 45, 149, 0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Loading animation */
+        .loading-dots {
+            display: inline-block;
+        }
+        
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header fade-in">
+        <div class="container">
+            <div class="header-content">
+                 <div class="footer-logo">
+                    <div class="logo-icon">
+                        <img src="{{ url_for('static', filename='rubrix-logo-2.png') }}" alt="RUBRIX Logo" class="custom-logo">
+                    </div>
+                    <div class="logo-text">RUBRIX</div>
+                </div>
+                <!-- <div class="logo">
+                    <div class="logo-icon pulse">R</div>
+                    <div>
+                        <div class="logo-text">RUBRIX</div>
+                        <div class="tagline">AI-Powered Assignment Analysis</div>
+                    </div>
+                </div> -->
+                <!-- <div class="header-actions">
+                    <span class="status-badge status-free">
+                        <i class="fas fa-robot"></i> Free AI Mode
+                    </span>
+                </div> -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- Hero Section -->
+            <div class="hero-section fade-in" style="animation-delay: 0.2s">
+                <h1>Transform Your Grading with AI</h1>
+                <p class="hero-subtitle">Upload assignments and rubrics for instant, detailed AI-powered feedback</p>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <i class="fas fa-bolt"></i>
+                        <div class="stat-number">Instant</div>
+                        <div class="stat-label">Analysis</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-chart-line"></i>
+                        <div class="stat-number">Detailed</div>
+                        <div class="stat-label">Feedback</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-edit"></i>
+                        <div class="stat-number">Smart</div>
+                        <div class="stat-label">Rewrite Tips</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-shield-alt"></i>
+                        <div class="stat-number">Secure</div>
+                        <div class="stat-label">Processing</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Upload Section -->
+            <div class="upload-section slide-in" style="animation-delay: 0.4s">
+                <h2 class="section-title"><i class="fas fa-cloud-upload-alt"></i> Upload & Analyze</h2>
+                <p class="section-subtitle">Get comprehensive feedback in seconds</p>
+                
+                {% if error %}
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                <form id="uploadForm" action="/analyze" method="POST" enctype="multipart/form-data">
+                    <div class="upload-grid">
+                        <!-- Assignment Upload -->
+                        <div class="upload-card" id="assignmentCard">
+                            <i class="fas fa-file-alt"></i>
+                            <h3>Assignment File</h3>
+                            <p>Upload your assignment document (PDF, DOCX, TXT)</p>
+                            <input type="file" id="assignment" name="assignment" class="file-input" 
+                                   accept=".txt,.pdf,.docx,.md,.py,.java,.cpp,.html,.css,.js,.json" required>
+                            <label for="assignment" class="file-label">
+                                <i class="fas fa-file-upload"></i> <span>Choose Assignment</span>
+                            </label>
+                            <div id="assignmentName" class="file-name"></div>
+                            
+                            <div class="file-info">
+                                <i class="fas fa-info-circle"></i> Supports: Essay, Code, Math, Reports
+                            </div>
+                        </div>
+                        
+                        <!-- Rubric Upload -->
+                        <div class="upload-card" id="rubricCard">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h3>Rubric File</h3>
+                            <p>Upload your grading rubric or criteria</p>
+                            <input type="file" id="rubric" name="rubric" class="file-input" 
+                                   accept=".txt,.pdf,.docx,.md,.json" required>
+                            <label for="rubric" class="file-label">
+                                <i class="fas fa-file-upload"></i> <span>Choose Rubric</span>
+                            </label>
+                            <div id="rubricName" class="file-name"></div>
+                            
+                            <div class="file-info">
+                                <i class="fas fa-info-circle"></i> Include scoring criteria for best results
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Options -->
+                    <div class="options-section" style="animation-delay: 0.6s">
+                        <h3><i class="fas fa-cog"></i> Analysis Options</h3>
+                        
+                        <div class="options-grid">
+                            <div class="option-toggle">
+                                <input type="checkbox" id="detailedAnalysis" name="detailed_analysis" checked>
+                                <label for="detailedAnalysis">
+                                    <i class="fas fa-search"></i>
+                                    <div>
+                                        <span>Detailed Feedback</span>
+                                        <small>Get comprehensive breakdown</small>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="option-toggle">
+                                <input type="checkbox" id="rewriteSuggestions" name="rewrite_suggestions" checked>
+                                <label for="rewriteSuggestions">
+                                    <i class="fas fa-edit"></i>
+                                    <div>
+                                        <span>Rewrite Suggestions</span>
+                                        <small>Get specific improvement tips</small>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="option-toggle">
+                                <input type="checkbox" id="gradePrediction" name="grade_prediction" checked>
+                                <label for="gradePrediction">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <div>
+                                        <span>Grade Prediction</span>
+                                        <small>Predict final grade</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="action-buttons" style="animation-delay: 0.8s">
+                        <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                            <i class="fas fa-magic"></i> 
+                            <div>
+                                <div>Analyze with AI</div>
+                                <div class="btn-subtext">Get instant feedback</div>
+                            </div>
+                        </button>
+                        
+                        <button type="button" class="btn btn-secondary" onclick="showTextInput()">
+                            <i class="fas fa-keyboard"></i>
+                            <div>
+                                <div>Enter Text Instead</div>
+                                <div class="btn-subtext">No files? Paste text</div>
+                            </div>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Text Input Section (Hidden by default) -->
+                <div id="textInputSection" style="display: none;">
+                    <div class="text-input-container">
+                        <h3><i class="fas fa-keyboard"></i> Direct Text Input</h3>
+                        
+                        <div class="text-input-grid">
+                            <div class="text-input-card">
+                                <h4><i class="fas fa-file-alt"></i> Assignment Text</h4>
+                                <textarea id="assignmentText" placeholder="Paste your assignment text here... (Max 5000 words)" rows="8"></textarea>
+                                <div class="word-count">Words: <span id="assignmentWordCount">0</span></div>
+                            </div>
+                            
+                            <div class="text-input-card">
+                                <h4><i class="fas fa-clipboard-list"></i> Rubric Text</h4>
+                                <textarea id="rubricText" placeholder="Paste your rubric or criteria here... (Include scoring if possible)" rows="8"></textarea>
+                                <div class="word-count">Words: <span id="rubricWordCount">0</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-primary" onclick="analyzeText()">
+                                <i class="fas fa-code"></i> Analyze Text
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="hideTextInput()">
+                                <i class="fas fa-times"></i> Back to File Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="features-section fade-in" style="animation-delay: 1s">
+                <h2 class="section-title"><i class="fas fa-star"></i> Why Choose RUBRIX?</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>AI-Powered Analysis</h3>
+                        <p>Advanced AI analyzes content against your specific rubric criteria for accurate scoring.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <h3>Instant Feedback</h3>
+                        <p>Get detailed feedback in seconds, not hours. Perfect for tight deadlines.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <h3>Rewrite Suggestions</h3>
+                        <p>Get specific suggestions to improve your writing with concrete examples.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3>Detailed Breakdown</h3>
+                        <p>See scores for each criterion with specific feedback on strengths and weaknesses.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="how-it-works fade-in" style="animation-delay: 1.2s">
+                <h2 class="section-title"><i class="fas fa-play-circle"></i> How It Works</h2>
+                
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Upload Files</h3>
+                            <p>Upload your assignment and rubric files</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>AI Analysis</h3>
+                            <p>Our AI analyzes against your rubric criteria</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Get Results</h3>
+                            <p>Receive comprehensive feedback and scores</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Improve</h3>
+                            <p>Use suggestions to enhance your work</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supported Formats -->
+            <div class="formats-section fade-in" style="animation-delay: 1.4s">
+                <h2 class="section-title"><i class="fas fa-file"></i> Supported Formats</h2>
+                
+                <div class="formats-grid">
+                    <div class="format-card">
+                        <i class="fas fa-file-text"></i>
+                        <h4>Text Files</h4>
+                        <p>.txt, .md, .rtf</p>
+                    </div>
+                    
+                    <div class="format-card">
+                        <i class="fas fa-file-pdf"></i>
+                        <h4>PDF Documents</h4>
+                        <p>.pdf (text extraction)</p>
+                    </div>
+                    
+                    <div class="format-card">
+                        <i class="fas fa-file-word"></i>
+                        <h4>Word Documents</h4>
+                        <p>.docx, .doc</p>
+                    </div>
+                    
+                    <div class="format-card">
+                        <i class="fas fa-code"></i>
+                        <h4>Code Files</h4>
+                        <p>.py, .java, .cpp, .js</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer fade-in" style="animation-delay: 1.6s">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <div class="logo-icon small">R</div>
+                    <div class="logo-text">RUBRIX</div>
+                </div>
+                
+                <div class="footer-links">
+                    <!-- <a href="/api/status" class="footer-link"><i class="fas fa-server"></i> API Status</a> -->
+                    <a href="#" class="footer-link"><i class="fas fa-question-circle"></i> Help</a>
+                    <a href="#" class="footer-link"><i class="fas fa-shield-alt"></i> Privacy</a>
+                </div>
+                
+                <div class="footer-copyright">
+                    <p>© {{ current_year }} RUBRIX | AI-Powered Assignment Evaluation</p>
+                    <!-- <p class="footer-subtext">Using Free AI Analysis</p> -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // File name display with green border effect
+        document.getElementById('assignment').addEventListener('change', function(e) {
+            const name = e.target.files[0]?.name || '';
+            const fileNameElement = document.getElementById('assignmentName');
+            const cardElement = document.getElementById('assignmentCard');
+            
+            if (name) {
+                fileNameElement.textContent = `✓ ${name}`;
+                fileNameElement.classList.add('show');
+                cardElement.classList.add('file-uploaded');
+                
+                // Update button text with checkmark
+                const label = document.querySelector('label[for="assignment"] span');
+                label.innerHTML = `<i class="fas fa-check"></i> File Selected`;
+            } else {
+                fileNameElement.classList.remove('show');
+                cardElement.classList.remove('file-uploaded');
+            }
+        });
+        
+        document.getElementById('rubric').addEventListener('change', function(e) {
+            const name = e.target.files[0]?.name || '';
+            const fileNameElement = document.getElementById('rubricName');
+            const cardElement = document.getElementById('rubricCard');
+            
+            if (name) {
+                fileNameElement.textContent = `✓ ${name}`;
+                fileNameElement.classList.add('show');
+                cardElement.classList.add('file-uploaded');
+                
+                // Update button text with checkmark
+                const label = document.querySelector('label[for="rubric"] span');
+                label.innerHTML = `<i class="fas fa-check"></i> File Selected`;
+            } else {
+                fileNameElement.classList.remove('show');
+                cardElement.classList.remove('file-uploaded');
+            }
+        });
+        
+        // Word count for text areas
+        document.getElementById('assignmentText')?.addEventListener('input', function() {
+            const words = this.value.trim().split(/\s+/).filter(word => word.length > 0).length;
+            document.getElementById('assignmentWordCount').textContent = words;
+        });
+        
+        document.getElementById('rubricText')?.addEventListener('input', function() {
+            const words = this.value.trim().split(/\s+/).filter(word => word.length > 0).length;
+            document.getElementById('rubricWordCount').textContent = words;
+        });
+        
+        // Text input toggle
+        function showTextInput() {
+            document.getElementById('textInputSection').style.display = 'block';
+            document.querySelector('.upload-grid').style.display = 'none';
+            document.querySelector('.options-section').style.display = 'none';
+            document.querySelector('.action-buttons').style.display = 'none';
+            
+            // Add animation
+            document.getElementById('textInputSection').classList.add('fade-in');
+        }
+        
+        function hideTextInput() {
+            document.getElementById('textInputSection').style.display = 'none';
+            document.querySelector('.upload-grid').style.display = 'grid';
+            document.querySelector('.options-section').style.display = 'block';
+            document.querySelector('.action-buttons').style.display = 'flex';
+        }
+        
+        // Text analysis
+        // async function analyzeText() {
+        //     const assignmentText = document.getElementById('assignmentText').value;
+        //     const rubricText = document.getElementById('rubricText').value;
+            
+        //     if (!assignmentText || !rubricText) {
+        //         alert('Please enter both assignment and rubric text');
+        //         return;
+        //     }
+            
+        //     const analyzeBtn = document.querySelector('#analyzeBtn');
+        //     const originalText = analyzeBtn.innerHTML;
+        //     analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <div><div>Analyzing<span class="loading-dots"></span></div><div class="btn-subtext">Please wait</div></div>';
+        //     analyzeBtn.disabled = true;
+            
+        //     try {
+        //         const response = await fetch('/analyze', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //             },
+        //             body: JSON.stringify({
+        //                 assignment_text: assignmentText,
+        //                 rubric_text: rubricText,
+        //                 detailed_analysis: document.getElementById('detailedAnalysis').checked,
+        //                 rewrite_suggestions: document.getElementById('rewriteSuggestions').checked,
+        //                 grade_prediction: document.getElementById('gradePrediction').checked
+        //             })
+        //         });
+                
+        //         if (response.ok) {
+        //             // If response is HTML (from file upload), just let form submit
+        //             window.location.href = '/result';
+        //         } else {
+        //             const result = await response.json();
+        //             alert('Analysis failed: ' + (result.error || 'Unknown error'));
+        //         }
+        //     } catch (error) {
+        //         console.error('Error:', error);
+        //         alert('Analysis failed. Please try again.');
+        //     } finally {
+        //         analyzeBtn.innerHTML = originalText;
+        //         analyzeBtn.disabled = false;
+        //     }
+        // }
+        // In index.html, update the analyzeText() function:
+async function analyzeText() {
+    const assignmentText = document.getElementById('assignmentText').value;
+    const rubricText = document.getElementById('rubricText').value;
+    
+    if (!assignmentText || !rubricText) {
+        alert('Please enter both assignment and rubric text');
+        return;
+    }
+    
+    const analyzeBtn = document.querySelector('#analyzeBtn');
+    const originalText = analyzeBtn.innerHTML;
+    analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <div><div>Analyzing<span class="loading-dots"></span></div><div class="btn-subtext">Please wait</div></div>';
+    analyzeBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                assignment_text: assignmentText,
+                rubric_text: rubricText,
+                detailed_analysis: document.getElementById('detailedAnalysis').checked,
+                rewrite_suggestions: document.getElementById('rewriteSuggestions').checked,
+                grade_prediction: document.getElementById('gradePrediction').checked
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Redirect to result page with analysis data
+            const queryParams = new URLSearchParams({
+                analysis: JSON.stringify(result.analysis),
+                assignment_name: 'Text Input',
+                rubric_name: 'Text Input'
+            }).toString();
+            
+            window.location.href = `/result?${queryParams}`;
+        } else {
+            alert('Analysis failed: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Analysis failed. Please try again.');
+    } finally {
+        analyzeBtn.innerHTML = originalText;
+        analyzeBtn.disabled = false;
+    }
+}
+        // Form submission for file upload
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const analyzeBtn = document.querySelector('#analyzeBtn');
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <div><div>Uploading & Analyzing<span class="loading-dots"></span></div><div class="btn-subtext">Processing your files</div></div>';
+            analyzeBtn.disabled = true;
+            
+            // Add pulse animation to button
+            analyzeBtn.classList.add('pulse');
+        });
+        
+        // Initialize animations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add animation to feature cards with staggered delay
+            const featureCards = document.querySelectorAll('.feature-card');
+            featureCards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+    </script>
+    <!-- Rubik's Cube Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-text">
+        <i class="fas fa-cube"></i>
+        Analyzing Your Submission
+        <div class="status-dots">
+            <div class="status-dot"></div>
+            <div class="status-dot"></div>
+            <div class="status-dot"></div>
+        </div>
+    </div>
+    
+    <div class="rubiks-cube-container">
+        <div class="rubiks-cube">
+            <!-- Front Face -->
+            <div class="cube-face front">
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+            </div>
+            <!-- Back Face -->
+            <div class="cube-face back">
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+            </div>
+            <!-- Right Face -->
+            <div class="cube-face right">
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+            </div>
+            <!-- Left Face -->
+            <div class="cube-face left">
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+            </div>
+            <!-- Top Face -->
+            <div class="cube-face top">
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+            </div>
+            <!-- Bottom Face -->
+            <div class="cube-face bottom">
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-dark"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+                <div class="cube-sticker sticker-pink"></div>
+                <div class="cube-sticker sticker-gray"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading-steps">
+        <div class="loading-step">📥 Uploading and processing files...</div>
+        <div class="loading-step">🤖 Sending to AI for analysis...</div>
+        <div class="loading-step">📊 Evaluating against rubric criteria...</div>
+        <div class="loading-step">✨ Generating detailed feedback...</div>
+    </div>
+    
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+    
+    <button class="cancel-btn" onclick="hideLoading()">
+        <i class="fas fa-times"></i> Cancel Analysis
+    </button>
+</div>
+
+<script>
+    // Loading overlay functions
+    function showLoading() {
+        document.getElementById('loadingOverlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+        document.body.style.overflow = 'auto';
+        
+        // Re-enable the analyze button if it was disabled
+        const analyzeBtn = document.querySelector('#analyzeBtn');
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-magic"></i> <div><div>Analyze with AI</div><div class="btn-subtext">Get instant feedback</div></div>';
+        }
+    }
+    
+    // Update form submission to show loading
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        // Show loading animation
+        showLoading();
+        
+        // Update button state
+        const analyzeBtn = document.querySelector('#analyzeBtn');
+        analyzeBtn.disabled = true;
+        
+        // Let the form submit normally - the loading will show until page redirects
+        // The loading will automatically hide when the new page loads
+    });
+    
+    // For text analysis, manually hide loading when done
+    async function analyzeText() {
+        const assignmentText = document.getElementById('assignmentText').value;
+        const rubricText = document.getElementById('rubricText').value;
+        
+        if (!assignmentText || !rubricText) {
+            alert('Please enter both assignment and rubric text');
+            return;
+        }
+        
+        showLoading();
+        
+        try {
+            const response = await fetch('/analyse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    assignment_text: assignmentText,
+                    rubric_text: rubricText,
+                    detailed_analysis: document.getElementById('detailedAnalysis').checked,
+                    rewrite_suggestions: document.getElementById('rewriteSuggestions').checked,
+                    grade_prediction: document.getElementById('gradePrediction').checked
+                })
+            });
+            
+            if (response.ok) {
+                // Get the HTML response and redirect
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
+            } else {
+                hideLoading();
+                alert('Analysis failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            hideLoading();
+            alert('Analysis failed. Please try again.');
+        }
+    }
+    
+    // Auto-hide loading if page takes too long (safety net)
+    setTimeout(() => {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay && loadingOverlay.classList.contains('active')) {
+            console.log('Analysis taking longer than expected...');
+        }
+    }, 10000); // 10 second timeout
+</script>
+</body>
+</html>

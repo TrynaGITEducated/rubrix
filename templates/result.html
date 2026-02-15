@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - RUBRIX</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <div class="logo-icon">
+                        <img src="{{ url_for('static', filename='rubrix-logo-2.png') }}" alt="RUBRIX Logo" class="custom-logo">
+                    </div>
+                    <div>
+                        <div class="logo-text">RUBRIX</div>
+                        <div class="tagline">AI-Powered Assignment Analysis</div>
+                    </div>
+                </a>
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-plus"></i> New Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- Results Header -->
+            <div class="results-header">
+                <h1><i class="fas fa-chart-bar"></i> 
+                    Analysis Results 
+                    {% if analysis.language == 'afrikaans' %}
+                    <span class="language-badge">🇿🇦 Afrikaans Assignment</span>
+                    {% elif analysis.language == 'english' %}
+                    <span class="language-badge">🇺🇸 English Assignment</span>
+                    {% endif %}
+                </h1>
+                <p class="section-subtitle">
+                    Assignment: <strong>{{ analysis.assignment_name }}</strong> | 
+                    Rubric: <strong>{{ analysis.rubric_name }}</strong> |
+                    Analyzed: <strong>{{ analysis.timestamp }}</strong>
+                </p>
+                
+                <!-- Score Circle -->
+                <div class="score-circle" style="--score-percentage: {{ analysis.overall_score }}%">
+                    <div>
+                        <div class="score-value">{{ analysis.overall_score }}</div>
+                        <div class="score-label">/ 100</div>
+                        {% if analysis.overall_grade %}
+                        <div class="score-grade">{{ analysis.overall_grade }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Overall Grade Justification -->
+                {% if analysis.grade_justification %}
+                <div class="grade-justification">
+                    <h3><i class="fas fa-gavel"></i> Grade Justification</h3>
+                    <p>{{ analysis.grade_justification }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Critical Deficiencies (High Priority Issues) -->
+            {% if analysis.critical_deficiencies and analysis.critical_deficiencies|length > 0 %}
+            <div class="upload-section critical-section">
+                <h2 class="section-title"><i class="fas fa-exclamation-triangle"></i> Critical Deficiencies Requiring Immediate Attention</h2>
+                <p class="section-subtitle">These issues must be addressed before resubmission</p>
+                
+                <div class="deficiencies-list">
+                    {% for deficiency in analysis.critical_deficiencies %}
+                    <div class="deficiency-item">
+                        <div class="deficiency-header">
+                            <span class="priority-{{ deficiency.priority }}">Priority: {{ deficiency.priority|upper }}</span>
+                            <strong>{{ deficiency.issue }}</strong>
+                        </div>
+                        {% if deficiency.evidence %}
+                        <div class="evidence-block">
+                            <div class="evidence-label"><i class="fas fa-quote-left"></i> Evidence:</div>
+                            <em>"{{ deficiency.evidence }}"</em>
+                        </div>
+                        {% endif %}
+                        <div class="remediation">
+                            <strong><i class="fas fa-wrench"></i> How to Fix:</strong> {{ deficiency.remediation }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Criteria Breakdown -->
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-list-check"></i> Detailed Criteria Breakdown</h2>
+                
+                <!-- Total Marks Summary -->
+                {% set total_score = namespace(value=0) %}
+                {% set total_possible = namespace(value=0) %}
+                {% for criterion in analysis.criteria_breakdown %}
+                    {% set total_score.value = total_score.value + (criterion.score_percentage * criterion.weight / 100) %}
+                    {% set total_possible.value = total_possible.value + criterion.weight %}
+                {% endfor %}
+                
+                <div class="marks-summary">
+                    <div class="summary-card">
+                        <i class="fas fa-calculator"></i>
+                        <div>
+                            <div class="summary-label">Total Score</div>
+                            <div class="summary-value">{{ "%.1f"|format(total_score.value) }}/{{ total_possible.value }}</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-percentage"></i>
+                        <div>
+                            <div class="summary-label">Percentage</div>
+                            <div class="summary-value">{{ "%.1f"|format((total_score.value / total_possible.value * 100)) }}%</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <div class="summary-label">Revision Time</div>
+                            <div class="summary-value">{{ analysis.readiness_assessment.estimated_revision_hours }} hrs</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Individual Criteria -->
+                <div class="criteria-grid detailed-criteria">
+                    {% for criterion in analysis.criteria_breakdown %}
+                    <div class="criteria-card detailed-card">
+                        <div class="criteria-header">
+                            <div class="criteria-title">
+                                {{ criterion.criterion }}
+                                <span class="criteria-weight">({{ criterion.weight }}% weight)</span>
+                            </div>
+                            <div class="criteria-score">
+                                {{ "%.1f"|format(criterion.score_percentage * criterion.weight / 100) }}/{{ criterion.weight }}
+                                <div class="score-percentage">{{ criterion.score_percentage }}%</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="criteria-score-details">
+                            <div class="score-progress">
+                                <div class="score-progress-fill {% if criterion.score_percentage < 70 %}needs-work{% elif criterion.score_percentage < 50 %}poor{% endif %}" 
+                                     style="width: {{ criterion.score_percentage }}%"></div>
+                            </div>
+                            <div class="score-text">
+                                {% if criterion.needs_improvement %}
+                                <span class="needs-work-text"><i class="fas fa-exclamation-circle"></i> Needs Work</span>
+                                {% else %}
+                                <span class="good-score-text"><i class="fas fa-check-circle"></i> Good</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Strengths -->
+                        {% if criterion.strengths and criterion.strengths|length > 0 %}
+                        <div class="criteria-section">
+                            <h4><i class="fas fa-thumbs-up strength-icon"></i> Strengths</h4>
+                            {% for strength in criterion.strengths %}
+                            <div class="strength-item">
+                                <span class="strength-badge">{{ loop.index }}</span> {{ strength }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Deficiencies -->
+                        {% if criterion.deficiencies and criterion.deficiencies|length > 0 %}
+                        <div class="criteria-section">
+                            <h4><i class="fas fa-exclamation-circle improvement-icon"></i> Areas Needing Improvement</h4>
+                            {% for deficiency in criterion.deficiencies %}
+                            <div class="deficiency-item-small">
+                                <span class="improvement-badge">{{ loop.index }}</span> {{ deficiency }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Recommendations -->
+                        {% if criterion.recommendations and criterion.recommendations|length > 0 %}
+                        <div class="criteria-section">
+                            <h4><i class="fas fa-lightbulb recommendation-icon"></i> Specific Recommendations</h4>
+                            <ul class="recommendations-list">
+                                {% for rec in criterion.recommendations %}
+                                <li>{{ rec }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Strengths to Build Upon -->
+            {% if analysis.strengths_to_build and analysis.strengths_to_build|length > 0 %}
+            <div class="upload-section strengths-section">
+                <h2 class="section-title"><i class="fas fa-star"></i> Key Strengths to Build Upon</h2>
+                
+                <div class="strengths-grid">
+                    {% for strength in analysis.strengths_to_build %}
+                    <div class="strength-card">
+                        <div class="strength-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="strength-content">
+                            <h4>{{ strength.strength }}</h4>
+                            {% if strength.evidence %}
+                            <div class="evidence-block">
+                                <div class="evidence-label">Evidence:</div>
+                                <em>"{{ strength.evidence }}"</em>
+                            </div>
+                            {% endif %}
+                            {% if strength.reinforcement %}
+                            <p><strong>How to build on this:</strong> {{ strength.reinforcement }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Structural Analysis -->
+            {% if analysis.structural_analysis %}
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-sitemap"></i> Structural Analysis</h2>
+                
+                <div class="structural-grid">
+                    <div class="structural-card">
+                        <h4><i class="fas fa-project-diagram"></i> Organization</h4>
+                        <p>{{ analysis.structural_analysis.organization }}</p>
+                    </div>
+                    
+                    <div class="structural-card">
+                        <h4><i class="fas fa-bullseye"></i> Argument Development</h4>
+                        <p>{{ analysis.structural_analysis.argument_development }}</p>
+                    </div>
+                    
+                    <div class="structural-card">
+                        <h4><i class="fas fa-clipboard-check"></i> Technical Compliance</h4>
+                        <p>{{ analysis.structural_analysis.technical_compliance }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Revision Recommendations -->
+            {% if analysis.revision_recommendations %}
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-tasks"></i> Revision Action Plan</h2>
+                
+                <div class="action-plan">
+                    <!-- High Priority -->
+                    {% if analysis.revision_recommendations.high_priority and analysis.revision_recommendations.high_priority|length > 0 %}
+                    <div class="action-section priority-high">
+                        <h4><i class="fas fa-exclamation-circle"></i> High Priority (Do First)</h4>
+                        <ul>
+                            {% for item in analysis.revision_recommendations.high_priority %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Content Improvements -->
+                    {% if analysis.revision_recommendations.content_improvements and analysis.revision_recommendations.content_improvements|length > 0 %}
+                    <div class="action-section">
+                        <h4><i class="fas fa-edit"></i> Content Improvements</h4>
+                        <ul>
+                            {% for item in analysis.revision_recommendations.content_improvements %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Structural Changes -->
+                    {% if analysis.revision_recommendations.structural_changes and analysis.revision_recommendations.structural_changes|length > 0 %}
+                    <div class="action-section">
+                        <h4><i class="fas fa-sitemap"></i> Structural Changes</h4>
+                        <ul>
+                            {% for item in analysis.revision_recommendations.structural_changes %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Technical Fixes -->
+                    {% if analysis.revision_recommendations.technical_fixes and analysis.revision_recommendations.technical_fixes|length > 0 %}
+                    <div class="action-section">
+                        <h4><i class="fas fa-cog"></i> Technical Fixes</h4>
+                        <ul>
+                            {% for item in analysis.revision_recommendations.technical_fixes %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Readiness Assessment -->
+            {% if analysis.readiness_assessment %}
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-clipboard-list"></i> Readiness Assessment</h2>
+                
+                <div class="readiness-card">
+                    <div class="readiness-status">
+                        <div class="status-indicator {% if analysis.readiness_assessment.status == 'Ready for Submission' %}status-good{% elif analysis.readiness_assessment.status == 'Needs Minor Revision' %}status-warning{% else %}status-bad{% endif %}">
+                            {{ analysis.readiness_assessment.status }}
+                        </div>
+                        <div class="estimated-time">
+                            <i class="fas fa-clock"></i>
+                            Estimated Revision Time: <strong>{{ analysis.readiness_assessment.estimated_revision_hours }} hours</strong>
+                        </div>
+                    </div>
+                    
+                    {% if analysis.readiness_assessment.key_barriers and analysis.readiness_assessment.key_barriers|length > 0 %}
+                    <div class="key-barriers">
+                        <h4>Key Barriers to Higher Score:</h4>
+                        <ul>
+                            {% for barrier in analysis.readiness_assessment.key_barriers %}
+                            <li>{{ barrier }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Summary -->
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-file-alt"></i> Overall Summary</h2>
+                <div class="summary-content">
+                    {{ analysis.summary }}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons" style="margin-top: 3rem;">
+                <button class="btn btn-primary" onclick="downloadReport()" id="downloadBtn">
+                    <i class="fas fa-download"></i> Download Detailed Report (PDF)
+                </button>
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i> Analyze Another Assignment
+                </a>
+                <button class="btn btn-secondary" onclick="toggleLanguage()">
+                    <i class="fas fa-language"></i> Toggle Language View
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Analysis ID: {{ analysis.analysis_id if analysis.analysis_id else 'N/A' }} | Generated: {{ analysis.timestamp if analysis.timestamp else 'Now' }}</p>
+            <p>© {{ current_year }} RUBRIX | AI-Powered Assignment Evaluation</p>
+        </div>
+    </div>
+
+    <script>
+        // Function to toggle between English and Afrikaans view (simulated)
+        function toggleLanguage() {
+            const currentLang = "{{ analysis.language if analysis.language else 'english' }}";
+            const newLang = currentLang === 'afrikaans' ? 'english' : 'afrikaans';
+            
+            alert(`Switching to ${newLang === 'afrikaans' ? 'Afrikaans' : 'English'} view. In production, this would reload the page with translated content.`);
+            
+            // In production: window.location.href = `/result?lang=${newLang}&analysis={{ analysis|tojson|safe }}`;
+        }
+        
+        // Function to show notification
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                ${message}
+            `;
+            
+            // Add to body
+            document.body.appendChild(notification);
+            
+            // Add animation styles if not already present
+            if (!document.querySelector('#notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    .notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 15px 20px;
+                        background: #4CAF50;
+                        color: white;
+                        border-radius: 5px;
+                        z-index: 10000;
+                        animation: slideIn 0.3s ease-out;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+                    
+                    .notification.error {
+                        background: #f44336;
+                    }
+                    
+                    .notification.warning {
+                        background: #ff9800;
+                    }
+                    
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // Function to download PDF report
+        function downloadReport() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            const originalHTML = downloadBtn.innerHTML;
+            
+            // Show loading state
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            downloadBtn.disabled = true;
+            
+            // Collect all data for report
+            const reportData = {
+                assignment: "{{ analysis.assignment_name }}",
+                rubric: "{{ analysis.rubric_name }}",
+                overall_score: "{{ analysis.overall_score }}",
+                overall_grade: "{{ analysis.overall_grade if analysis.overall_grade else 'N/A' }}",
+                criteria: {{ analysis.criteria_breakdown|tojson if analysis.criteria_breakdown else [] }},
+                critical_deficiencies: {{ analysis.critical_deficiencies|tojson if analysis.critical_deficiencies else [] }},
+                strengths_to_build: {{ analysis.strengths_to_build|tojson if analysis.strengths_to_build else [] }},
+                structural_analysis: {{ analysis.structural_analysis|tojson if analysis.structural_analysis else {} }},
+                revision_recommendations: {{ analysis.revision_recommendations|tojson if analysis.revision_recommendations else {} }},
+                readiness_assessment: {{ analysis.readiness_assessment|tojson if analysis.readiness_assessment else {} }},
+                summary: "{{ analysis.summary if analysis.summary else '' }}",
+                grade_justification: "{{ analysis.grade_justification if analysis.grade_justification else '' }}",
+                language: "{{ analysis.language if analysis.language else 'english' }}",
+                analysis_id: "{{ analysis.analysis_id if analysis.analysis_id else 'N/A' }}"
+            };
+            
+            // Send data to server to generate PDF
+            fetch('/download-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reportData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('PDF generation failed');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Create filename
+                const assignmentName = "{{ analysis.assignment_name|replace(' ', '_') }}".replace(/[^a-zA-Z0-9_-]/g, '');
+                const score = "{{ analysis.overall_score }}";
+                const date = new Date().toISOString().slice(0, 10);
+                a.download = `RUBRIX_Report_${assignmentName}_${score}_${date}.pdf`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                // Restore button
+                downloadBtn.innerHTML = originalHTML;
+                downloadBtn.disabled = false;
+                
+                // Show success message
+                showNotification('PDF report downloaded successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Restore button
+                downloadBtn.innerHTML = originalHTML;
+                downloadBtn.disabled = false;
+                
+                // Show error message
+                showNotification('Failed to generate PDF. Please try again.', 'error');
+                
+                // Fallback to JSON download
+                setTimeout(() => {
+                    if (confirm('PDF generation failed. Would you like to download the analysis as JSON instead?')) {
+                        downloadJsonReport(reportData);
+                    }
+                }, 500);
+            });
+        }
+        
+        // Fallback JSON download function
+        function downloadJsonReport(reportData) {
+            const dataStr = JSON.stringify(reportData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const assignmentName = "{{ analysis.assignment_name|replace(' ', '_') }}".replace(/[^a-zA-Z0-9_-]/g, '');
+            const date = new Date().toISOString().slice(0, 10);
+            const exportFileDefaultName = `RUBRIX_Report_${assignmentName}_${date}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            document.body.appendChild(linkElement);
+            linkElement.click();
+            document.body.removeChild(linkElement);
+        }
+        
+        // Animate progress bars on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const progressBars = document.querySelectorAll('.score-progress-fill');
+            progressBars.forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 300);
+            });
+            
+            // Add button loading styles
+            if (!document.querySelector('#button-styles')) {
+                const style = document.createElement('style');
+                style.id = 'button-styles';
+                style.textContent = `
+                    .btn:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                    
+                    .fa-spin {
+                        animation: spin 1s linear infinite;
+                    }
+                    
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        });
+        
+        // Function to highlight text based on criteria (for future enhancement)
+        function highlightCriteria(criterionName) {
+            alert(`Would highlight all text related to: ${criterionName}`);
+            // Future: Implement text highlighting in original assignment
+        }
+    </script>
+</body>
+</html>
