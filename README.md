@@ -28,11 +28,19 @@
 
 ## Screenshotes
 <div align="center">
-  <img src="static/rubrix-logo-2.png" alt="RUBRIX Logo" width="120" height="120">
-  <img src="static/upload.png" alt="upload section" width="120" height="120">
-  <img src="static/analysis-prompt.png" alt="RUBRIX Logo" width="120" height="120">
-  <img src="static/analysis-process.png" alt="RUBRIX Logo" width="120" height="120">
-   <img src="static/batch-upload.png" alt="RUBRIX Logo" width="120" height="120">
+  <img src="static/upload.png" alt="upload section" width="500" height="400">
+</div>
+<div align="center">
+  <img src="static/analysis-prompt.png" alt="upload section" width="50" height="4000">
+</div>
+<div align="center">
+  <img src="static/analysis-process.png" alt="upload section" width="500" height="400">
+</div>
+<div align="center">
+  <img src="static/analysis-prompt.png" alt="upload section" width="500" height="400">
+</div>
+<div align="center">
+  <img src="static/batch-upload.png" alt="upload section" width="500" height="400">
 </div>
 
 ### Installation
