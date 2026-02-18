@@ -30,14 +30,11 @@
 <div align="center">
   <img src="static/upload.png" alt="upload section" width="500" height="400">
 </div>
-<div align="center">
+<div align="left">
   <img src="static/analysis-prompt.png" alt="upload section" width="50" height="4000">
 </div>
 <div align="center">
   <img src="static/analysis-process.png" alt="upload section" width="500" height="400">
-</div>
-<div align="center">
-  <img src="static/analysis-prompt.png" alt="upload section" width="500" height="400">
 </div>
 <div align="center">
   <img src="static/batch-upload.png" alt="upload section" width="500" height="400">
